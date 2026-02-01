@@ -85,7 +85,8 @@
   </div>
 
   <script>
-    const API_URL = "https://wild-pine-eea2.arthurmigue6557.workers.dev/visitas"; // 🔴 troque aqui
+    const API_URL =
+      "https://wild-pine-eea2.arthurmigue6557.workers.dev/visitas";
 
     const contadorEl = document.getElementById("contador");
     const statusEl = document.getElementById("status");
@@ -109,25 +110,19 @@
 
     async function carregar() {
       try {
-        // tenta registrar visita
         const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" }
+          method: "GET",
+          cache: "no-store"
         });
+
+        if (!res.ok) throw new Error("Erro servidor");
 
         const data = await res.json();
 
         animar(data.visitas);
 
-        if (data.servidor.status === "ajustando") {
-          statusEl.className = "status ajustando";
-          statusEl.textContent = "Servidor se ajustando automaticamente ⚠️";
-        } else {
-          statusEl.className = "status ok";
-          statusEl.textContent = data.novaVisita
-            ? "Visita registrada com sucesso ✅"
-            : "Você já foi contado 👍";
-        }
+        statusEl.className = "status ok";
+        statusEl.textContent = "Visita registrada com sucesso ✅";
 
       } catch (e) {
         statusEl.className = "status erro";
@@ -141,4 +136,5 @@
 
 </body>
 </html>
+
 
