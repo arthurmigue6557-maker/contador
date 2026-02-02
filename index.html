@@ -1,140 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Contador de Visitas</title>
-
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    .card {
-      background: #fff;
-      padding: 40px;
-      border-radius: 20px;
-      text-align: center;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 20px 50px rgba(0,0,0,.15);
-    }
-
-    h1 {
-      margin-bottom: 10px;
-      font-size: 2.4rem;
-      background: linear-gradient(90deg,#6366f1,#a855f7,#ec4899);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    #contador {
-      font-size: 5rem;
-      font-weight: 800;
-      margin: 20px 0;
-      transition: transform .3s ease;
-    }
-
-    #contador:hover {
-      transform: scale(1.05);
-    }
-
-    .status {
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: .95rem;
-    }
-
-    .ok {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .ajustando {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .erro {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    footer {
-      margin-top: 20px;
-      font-size: .8rem;
-      color: #6b7280;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contador de Visitas</title>
+<style>
+  body {margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2ff,#e0e7ff);font-family:system-ui,sans-serif;}
+  .card{background:#fff;padding:40px;border-radius:20px;text-align:center;width:100%;max-width:420px;box-shadow:0 20px 50px rgba(0,0,0,.15);}
+  h1{margin-bottom:10px;font-size:2.4rem;background:linear-gradient(90deg,#6366f1,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  #contador{font-size:5rem;font-weight:800;margin:20px 0;transition:transform .3s ease;}
+  #contador:hover{transform:scale(1.05);}
+  .status{margin-top:15px;padding:12px;border-radius:12px;font-weight:600;font-size:.95rem;}
+  .ok{background:#dcfce7;color:#166534;}
+  .ajustando{background:#fef3c7;color:#92400e;}
+  .erro{background:#fee2e2;color:#991b1b;}
+  footer{margin-top:20px;font-size:.8rem;color:#6b7280;}
+</style>
 </head>
 <body>
+<div class="card">
+  <h1>Visitas</h1>
+  <div id="contador">0</div>
+  <div id="status" class="status ok">Conectando ao servidor…</div>
+  <footer>Cloudflare Worker • Auto-ajuste • Seguro</footer>
+</div>
 
-  <div class="card">
-    <h1>Visitas</h1>
-    <div id="contador">0</div>
-    <div id="status" class="status ok">Conectando ao servidor…</div>
-    <footer>Cloudflare Worker • Auto-ajuste • Seguro</footer>
-  </div>
+<script>
+const API_URL="https://wild-pine-eea2.arthurmigue6557.workers.dev/visitas";
 
-  <script>
-    const API_URL =
-      "https://wild-pine-eea2.arthurmigue6557.workers.dev/visitas";
+const contadorEl=document.getElementById("contador");
+const statusEl=document.getElementById("status");
+const STORAGE_KEY="visita_contada";
 
-    const contadorEl = document.getElementById("contador");
-    const statusEl = document.getElementById("status");
+function animar(valor){
+  let atual=0;
+  const duracao=1200;
+  const inicio=performance.now();
+  function frame(t){
+    const progresso=Math.min((t-inicio)/duracao,1);
+    const ease=1-Math.pow(1-progresso,3);
+    const numero=Math.floor(atual + (valor-atual)*ease);
+    contadorEl.textContent=numero.toLocaleString("pt-BR");
+    if(progresso<1)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
 
-    function animar(valor) {
-      let atual = 0;
-      const duracao = 1200;
-      const inicio = performance.now();
-
-      function frame(t) {
-        const progresso = Math.min((t - inicio) / duracao, 1);
-        const ease = 1 - Math.pow(1 - progresso, 3);
-        const numero = Math.floor(atual + (valor - atual) * ease);
-        contadorEl.textContent = numero.toLocaleString("pt-BR");
-
-        if (progresso < 1) requestAnimationFrame(frame);
-      }
-
-      requestAnimationFrame(frame);
+async function carregar(){
+  try{
+    if(localStorage.getItem(STORAGE_KEY)) {
+      statusEl.className="status ok";
+      statusEl.textContent="Você já foi contado 👍";
     }
 
-    async function carregar() {
-      try {
-        const res = await fetch(API_URL, {
-          method: "GET",
-          cache: "no-store"
-        });
+    const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"}});
+    const data=await res.json();
 
-        if (!res.ok) throw new Error("Erro servidor");
+    animar(data.visitas);
 
-        const data = await res.json();
-
-        animar(data.visitas);
-
-        statusEl.className = "status ok";
-        statusEl.textContent = "Visita registrada com sucesso ✅";
-
-      } catch (e) {
-        statusEl.className = "status erro";
-        statusEl.textContent = "Erro ao conectar ao servidor";
-        console.error(e);
-      }
+    if(data.servidor.status==="ajustando"){
+      statusEl.className="status ajustando";
+      statusEl.textContent="Servidor se ajustando automaticamente ⚠️. Aguarde...";
+    } else if(data.servidor.status==="erro"){
+      statusEl.className="status erro";
+      statusEl.textContent="Erro ao conectar ao servidor ❌";
+    } else {
+      statusEl.className="status ok";
+      statusEl.textContent=data.novaVisita?"Visita registrada com sucesso ✅":"Você já foi contado 👍";
+      if(data.novaVisita) localStorage.setItem(STORAGE_KEY,"true");
     }
 
-    carregar();
-  </script>
+  } catch(e){
+    statusEl.className="status erro";
+    statusEl.textContent="Erro ao conectar ao servidor ❌";
+    console.error(e);
+  }
+}
 
+carregar();
+</script>
 </body>
 </html>
+
 
 
